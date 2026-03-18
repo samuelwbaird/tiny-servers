@@ -1,0 +1,10 @@
+services:
+  lua:
+    build: application
+    ports:
+      - "8080:80"
+    volumes:
+      # map in the lua application files
+      - ./application:/srv/application
+      # map in the tiny servers
+      - ./servers:/srv/servers
