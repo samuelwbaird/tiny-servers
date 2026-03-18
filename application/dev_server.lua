@@ -11,7 +11,7 @@ rascal.log_service:log_to_console(true)
 -- rascal.service('tiny-servers.tiny_server_wrangler', {})
 
 -- configure an HTTP server
-rascal.http_server('tcp://*:80', 2, [[
+rascal.http_server('tcp://*:8080', 2, [[
 	prefix('/', {
 		handler('tiny-servers.http_handler', {}),
 	})
