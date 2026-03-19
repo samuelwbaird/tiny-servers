@@ -1,2 +1,0 @@
--- maintain a cache of tiny_server objects
--- if a request comes through, and we haven't done a freshness check of that server recently, then check it and reload if needed

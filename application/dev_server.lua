@@ -8,7 +8,7 @@ local rascal = require('rascal.core')
 rascal.log_service:log_to_console(true)
 
 -- launch a service to handle api calls to tiny servers
--- rascal.service('tiny-servers.tiny_server_wrangler', {})
+rascal.service('tiny-servers.wrangler', {})
 
 -- configure an HTTP server
 rascal.http_server('tcp://*:8080', 2, [[

@@ -8,6 +8,7 @@ local static_handler = require('rascal.http.static_handler')
 return class(function (http_handler)
 
 	function http_handler:init()
+		self.wrangler_request = rascal.registry:connect('tiny_server.wrangler.synchronous.request')
 	end
 	
 	function http_handler:handle(request, context, response)
@@ -15,9 +16,11 @@ return class(function (http_handler)
 		
 		-- find the first fragment of the path, and see if its referencing a server
 		local server = request.url_path:match('([^/%.]+)/')
-		if server then
+		if server == 'api' then
+			server = nil
+		elseif server then
 			-- capture the remaining path
-			path = path:sub(#server + 1)
+			path = path:sub(#server + 2)
 			-- either nil or 'tiny-server' are handled as a request directly to the tiny servers application
 			if server == 'tiny-server' then
 				server = nil
@@ -35,8 +38,26 @@ return class(function (http_handler)
 				return true
 			end
 			
-			-- TODO: api request from the service, return with encoding or error responses as needed
-			-- text, json, success/error
+			-- get these from the rest of the request
+			local api_name = 'test'
+			local input = {}
+			
+			local result = nil
+			if server then
+				result = self.wrangler_request:handle_api(server, api_name, input)
+			else
+				-- tiny server api call
+			end
+			
+			if not result then
+				result = {
+					success = false,
+					message = 'Unknown API call - ' .. (server or 'tiny-servers'),
+					errror = 'unknown_api',
+				}
+			end
+			response:set_json(result)
+			return true
 		end
 		
 		-- otherwise see if it can be served as static content from the specific server
