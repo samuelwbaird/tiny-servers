@@ -16,21 +16,45 @@ return class(function (wrangler)
 	function wrangler:init()
 		self.servers = cache()
 		proxy_server(self, synchronous_request_api, 'inproc://tiny_server.wrangler.synchronous.request', zmq.REP, 'tiny_server.wrangler.synchronous.request')
-		loop:add_interval(5000, self:delegate(self.slow_tick))
+	end
+	
+	
+	local function handled(f, ...)
+		local args = { ... }
+		local wrapper = function ()
+			return f(unpack(args))
+		end
+		return xpcall(wrapper, function (error)
+			error = tostring(error)
+			-- log the error with code position
+			log(error)
+			-- return the error without code position
+			return error:match('%d: (.*)$') or error
+		end)
 	end
 	
 	function wrangler:handle_api(server_name, api_name, input)
-		log('handle_api', server_name)
-		local server = self:get_server(server_name)
-		if server then
-			return server:handle_api(api_name, input)
+		-- safely get or load the server
+		local success, server = handled(self.get_server, self, server_name)
+		if not success then
+			return {
+				success = false,
+				error = self.server_name .. ' not available',
+			}
 		end
-		return {
-			success = true,
-			error = nil,
-			message = '',
-			data = '',
-		}
+		
+		local success, result = handled(server.handle_api, server, api_name, input)
+		if success then
+			return {
+				success = true,
+				data = result,
+			}
+		else
+			return {
+				success = false,
+				error = result,
+			}
+		end
 	end
 	
 	function wrangler:get_server(server_name)
@@ -49,12 +73,8 @@ return class(function (wrangler)
 		end
 		
 		-- otherwise
-		log('tiny server not found', server_name)
+		log(server_name, '<server not found>')
 		return nil
-	end
-	
-	function wrangler:slow_tick()
-		-- call clean up tick on all servers
 	end
 
 end)
