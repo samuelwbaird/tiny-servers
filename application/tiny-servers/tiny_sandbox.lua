@@ -17,6 +17,8 @@ return class(function (tiny_sandbox)
 			type = type,
 			print = print,
 			error = error,
+			tostring = tostring,
+			tonumber = tonumber,
 			getmetatable = getmetatable,
 			setmetatable = setmetatable,
 		}
@@ -60,6 +62,14 @@ return class(function (tiny_sandbox)
 		local code = file:read('*a')
 		file:close()
 		return self:execute_code(code, name or filepath)
+	end
+	
+	function tiny_sandbox:function_exists(function_name)
+		return type(rawget(self.environment, function_name)) == 'function'
+	end
+	
+	function tiny_sandbox:execute_function(function_name, ...)
+		return self.environment[function_name](...)
 	end
 
 end)

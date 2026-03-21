@@ -33,9 +33,13 @@ return class(function (tiny_server)
 	end
 	
 	function tiny_server:handle_api(api_name, input)
-		log(self.server_name, api_name)
-		-- error('something went wrong')
-		return self.server_name .. ' ' .. api_name
+		local function_name = 'api_' .. api_name
+		if not self.sandbox:function_exists(function_name) then
+			error(self.server_name .. ': api function does not exist ' .. function_name)
+		end
+		-- find the session object (if it exists)
+		local session = {}
+		return self.sandbox:execute_function('api_' .. api_name, session, input)
 	end
 	
 	function tiny_server:check_if_fresh()

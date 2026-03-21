@@ -28,6 +28,7 @@ return class(function (wrangler)
 			error = tostring(error)
 			-- log the error with code position
 			log(error)
+			-- print(require('debug').traceback(error))
 			-- return the error without code position
 			return error:match('%d: (.*)$') or error
 		end)

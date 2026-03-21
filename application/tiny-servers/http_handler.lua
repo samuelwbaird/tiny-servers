@@ -16,15 +16,9 @@ return class(function (http_handler)
 		
 		-- find the first fragment of the path, and see if its referencing a server
 		local server = request.url_path:match('([^/%.]+)/')
-		if server == 'api' then
-			server = nil
-		elseif server then
+		if server then
 			-- capture the remaining path
 			path = path:sub(#server + 2)
-			-- either nil or 'tiny-server' are handled as a request directly to the tiny servers application
-			if server == 'tiny-server' then
-				server = nil
-			end
 		end
 		
 		-- see if the request is an API request for a server
@@ -39,29 +33,31 @@ return class(function (http_handler)
 			end
 			
 			-- get these from the rest of the request
-			local api_name = 'test'
-			local input = {}
-			
+			local api_name = request:path_slugs()[3]
 			local result = nil
-			if server then
-				result = self.wrangler_request:handle_api(server, api_name, input)
-			else
-				-- tiny server api call
+			
+			if api_name then
+				local input = request:input() or request.url_vars
+				if server == 'tiny-server' then
+					-- tiny server api call
+				else
+					result = self.wrangler_request:handle_api(server, api_name, input)
+				end
 			end
 			
 			if not result then
 				result = {
 					success = false,
-					message = 'Unknown API call - ' .. (server or 'tiny-servers'),
 					errror = 'unknown_api',
 				}
 			end
+			
 			response:set_json(result)
 			return true
 		end
 		
 		-- otherwise see if it can be served as static content from the specific server
-		if server then
+		if server and server ~= 'tiny-server' then
 			if self:static_content('../servers/' .. server .. '/html/', path, request, context, response) then
 				return true
 			end

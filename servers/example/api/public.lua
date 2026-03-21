@@ -1,4 +1,4 @@
-function api_home_page_emojis(session, parameters)
+function api_emojis(session, parameters)
 	return {
 		{ emoji = '1', identity = 'sam@sam.com', time = 1774048635 },
 		{ emoji = '2', identity = 'sam@sam.com', time = 1774038635 },
