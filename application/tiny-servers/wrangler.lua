@@ -39,7 +39,7 @@ return class(function (wrangler)
 		if not success then
 			return {
 				success = false,
-				error = self.server_name .. ' not available',
+				error = server_name .. ' not available',
 			}
 		end
 		

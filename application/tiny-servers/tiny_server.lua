@@ -1,8 +1,10 @@
+local lfs = require('lfs')
+
 local class = require('core.class')
 local array = require('core.array')
 local cache = require('core.cache')
 
-local lfs = require('lfs')
+local tiny_sandbox = require('tiny-servers.tiny_sandbox')
 
 -- regularly close/clean the DB? or open it in its most naive and editable formatlocal class = require('core.class')
 return class(function (tiny_server)
@@ -14,6 +16,9 @@ return class(function (tiny_server)
 		self.lua_files = {}
 		self.fresh = true
 		
+		-- prepare the sandbox environment for this code
+		self.sandbox = tiny_sandbox()
+		
 		-- scan and load all the lua files
 		self:scan_lua_files('', function (filepath, attributes)
 			local file = io.open(self.path .. filepath, 'rb')
@@ -23,6 +28,7 @@ return class(function (tiny_server)
 				contents = contents,
 				attributes = attributes,
 			}
+			self.sandbox:execute_file(self.path .. filepath, server_name .. '/' .. filepath)
 		end)
 	end
 	
@@ -51,20 +57,29 @@ return class(function (tiny_server)
 	end
 	
 	function tiny_server:scan_lua_files(prefix, callback)
+		-- always process files in a set order, alphabetical, files before folders
+		local files = {}
 		for file in lfs.dir(self.path .. prefix) do
 			if file:sub(1, 1) == '.' then
 				-- skip .
 			else
-				local attributes = lfs.attributes(self.path .. prefix .. file)
-				if attributes.mode == 'directory' then
-					self:scan_lua_files(prefix .. file .. '/', callback)
-				else
-					-- if this is a lua file then 
-					if file:match('%.lua$') then
-						callback(prefix .. file, attributes)
-					end
-				end
+				files[#files + 1] = file
 			end
+		end
+		table.sort(files)
+		
+		local folders= {}
+		for _, file in ipairs(files) do
+			local attributes = lfs.attributes(self.path .. prefix .. file)
+			if attributes.mode == 'directory' then
+				folders[#folders + 1] = file
+			elseif file:match('%.lua$') then
+				-- if this is a lua file then 
+				callback(prefix .. file, attributes)
+			end
+		end
+		for _, folder in ipairs(folders) do
+			self:scan_lua_files(prefix .. folder .. '/', callback)
 		end
 	end
 

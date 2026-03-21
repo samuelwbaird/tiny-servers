@@ -9,7 +9,7 @@ function prepare()
 	db:ensure_column('emoji_log', 'timestamp', db.TIMESTAMP)
 	db:ensure_column('emoji_log', 'email', db.TEXT)
 	-- add required indexes
-	db:ensure_index('emoji_log', ['timestamp'])
+	db:ensure_index('emoji_log', { 'timestamp' })
 end
 
 function is_admin(session)
