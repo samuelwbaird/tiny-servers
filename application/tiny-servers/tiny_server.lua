@@ -15,6 +15,7 @@ return class(function (tiny_server)
 		self.path = path
 		self.lua_files = {}
 		self.fresh = true
+		self.last_scan = utc_time()
 		
 		-- prepare the sandbox environment for this code
 		self.sandbox = tiny_sandbox()
@@ -47,16 +48,22 @@ return class(function (tiny_server)
 			return false
 		end
 		
-		-- check if any of the files have changed (might need to cache this result later)
-		self:scan_lua_files('', function (filepath, attributes)
-			if self.lua_files[filepath] then
-				if self.lua_files[filepath].attributes.modification ~= attributes.modification then
+		-- its costly to scan all the files every time, so only recheck if the last scan
+		-- was at least a small amount of time ago (keep this short, so debug cycle is responsive)
+		local now = utc_time()
+		if now - self.last_scan > 0.5 then
+			self.last_scan = now
+				-- check if any of the files have changed (might need to cache this result later)
+			self:scan_lua_files('', function (filepath, attributes)
+				if self.lua_files[filepath] then
+					if self.lua_files[filepath].attributes.modification ~= attributes.modification then
+						self.fresh = false
+					end
+				else
 					self.fresh = false
 				end
-			else
-				self.fresh = false
-			end
-		end)
+			end)
+		end
 		return self.fresh
 	end
 	
