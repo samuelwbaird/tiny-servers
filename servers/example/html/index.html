@@ -1,9 +1,21 @@
 <html>
 <head>
+	<link href="css/style.css" rel="stylesheet">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Emoji Log</title>
 </head>
 <body>
-	<h1>Emoji Log</h1>
-	<h2>An example tiny server</h2>
+	<div id="app">
+	</div>
+<script type="module" charset="UTF-8">
+	import * as hair from '../js/hair.js';
+	import EmojiAppModel from './js/model.js';
+	import app from './js/view.js';
+	
+	// -- render the app in place ---------------------------------
+	const parent = document.getElementById('app');
+	const model = new EmojiAppModel();
+	hair.render(parent, model, app);
+</script>
 </body>
 </html>

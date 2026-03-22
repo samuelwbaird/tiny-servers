@@ -13,6 +13,10 @@ rascal.service('tiny-servers.wrangler', {})
 -- configure an HTTP server
 rascal.http_server('tcp://*:8080', 2, [[
 	prefix('/', {
+		prefix('js/', {
+			static('submodules/hair/', nil, false),
+			static('submodules/hair-mini/', nil, false),
+		}),
 		handler('tiny-servers.http_handler', {}),
 	})
 ]])
