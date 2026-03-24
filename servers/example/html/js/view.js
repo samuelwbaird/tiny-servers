@@ -26,9 +26,12 @@ function emojiLogView(model) {
 				h.div(entry.emoji),
 				h.div(entry.identity),
 				h.div(formatTimestamp(entry.time)),
-				h.button('❌', {}, h.listen('click', () => {
+				h.button('❌', {}, h.listen('click', async () => {
 					if (window.confirm('Are you sure you wish to delete this emoji?')) {
-						model.deleteEmoji(entry);
+						const result = await model.deleteEmoji(entry);
+						if (!result.success) {
+							alert(result.error);
+						}
 					}
 				})),
 			];
@@ -57,8 +60,11 @@ function addEmojiView(model) {
 	return h.div({ class: 'emoji-panel' }, [
 		h.span('Add an emoji to the log'),
 		h.compose(available_emojis, (emoji) => {
-			return h.button(emoji, { class: 'emoji-button' }, h.listen('click', () => {
-				model.addEmoji(emoji);
+			return h.button(emoji, { class: 'emoji-button' }, h.listen('click', async () => {
+				const result = await model.addEmoji(emoji);
+				if (!result.success) {
+					alert(result.error);
+				}
 			}));
 		}),
 	]);

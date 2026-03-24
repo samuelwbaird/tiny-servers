@@ -1,5 +1,5 @@
 -- set package path for require libraries
-package.path = 'submodules/brogue/source/?.lua;' .. package.path
+package.path = 'submodules/brogue/source/?.lua;submodules/prelude/?.lua;' .. package.path
 
 -- use rascal
 local rascal = require('rascal.core')
@@ -8,6 +8,7 @@ local rascal = require('rascal.core')
 rascal.log_service:log_to_console(true)
 
 -- launch a service to handle api calls to tiny servers
+rascal.service('tiny-servers.session', {})
 rascal.service('tiny-servers.wrangler', {})
 
 -- configure an HTTP server

@@ -14,5 +14,5 @@ end
 
 function is_admin(session)
 	local valid_admin_emails = list({ 'samuelwbaird@gmail.com' })
-	return session.logged_in and valid_admin_emails:includes(session.email)
+	return session.logged_in and valid_admin_emails:includes(session.identity)
 end

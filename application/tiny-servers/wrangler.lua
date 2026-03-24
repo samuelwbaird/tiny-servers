@@ -34,7 +34,7 @@ return class(function (wrangler)
 		end)
 	end
 	
-	function wrangler:handle_api(server_name, api_name, input)
+	function wrangler:handle_api(server_name, api_name, session, input)
 		-- safely get or load the server
 		local success, server = handled(self.get_server, self, server_name)
 		if not success then
@@ -44,7 +44,7 @@ return class(function (wrangler)
 			}
 		end
 		
-		local success, result = handled(server.handle_api, server, api_name, input)
+		local success, result = handled(server.handle_api, server, api_name, session, input)
 		if success then
 			return {
 				success = true,

@@ -30,6 +30,7 @@ export default class EmojiAppModel {
 			this.emojiLog.splice(index, 1);
 			hair.signal(this);
 		}
+		return new api.ApiResult(false, null, 'You must be an admin');
 	}
 	
 	async addEmoji(emoji) {
@@ -40,6 +41,7 @@ export default class EmojiAppModel {
 			time: (Date.now() / 1000)
 		});
 		hair.signal(this);
+		return new api.ApiResult(true, null, null);
 	}
 	
 }
