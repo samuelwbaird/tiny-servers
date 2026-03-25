@@ -34,7 +34,7 @@ return class(function (http_handler)
 				identity = nil,
 			}
 			if session_id then
-				-session = self.session_request:get_session_data(session_id)
+				session = self.session_request:get_session_data(session_id)
 			else
 				session_id = random_key.printable(64)
 				response:set_header('Set-Cookie', 'session=' .. session_id .. '; Path=/; HttpOnly; SameSite=Strict; Max-Age=2592000;')
