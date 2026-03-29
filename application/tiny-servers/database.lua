@@ -78,56 +78,99 @@ return class(function (database)
 		return self:query('SELECT * FROM ' .. database.safe_name(table) .. ' WHERE `id` = ?', { id })
 	end
 		
-	function database:select_one(table, whereValues)
-		return self:select_where(table, whereValues, 1)
+	function database:select_one(table, where_values)
+		return self:select_where(table, where_values, 1)
 	end
 		
-	function database:select_where(table, whereValues, limit)
+	function database:select_where(table, where_values, limit)
 		local builder = self:query_builder()
 		builder:add('SELECT * FROM')
 		builder:add_name(table, true)
 		builder:add('WHERE')
-		for k, v in pairs(whereValues) do
+		for k, v in pairs(where_values) do
 			builder:add_name(k, true)
-			builder:add('= ?', v)
+			builder:add('= ?', { v })
+			builder:add('AND')
 		end
+		builder:remove_trailing('AND')
 		if limit then
-			builder:add('LIMIT ?', limit)
+			builder:add('LIMIT ?', { limit })
 		end
-		self:query(builder:query(), builder.bindings)
+		return builder:query()
 	end
 	
 	function database:select_all(table)
 		return self:query('SELECT * FROM ' .. database.safe_name(table))
 	end
 
-	function database:insert(table, insertValues)
-		local field_names, standins = self:add_names_and_standins(fields)
-		self.clauses:push('INSERT INTO ' .. table_name .. ' (' .. table.concat(field_names, ', ') .. ') VALUES (' .. table.concat(standins, ', ') .. ')')
-		return self
-		
+	function database:insert(table, insert_values)
+		local builder = self:query_builder()
+		builder:add('INSERT INTO')
+		builder:add_name(table, true)
+		builder:add_names(insert_values, true)
+		builder:add('VALUES')
+		builder:add_placeholders(insert_values, true)
+		return builder:query()
 	end
 
-	function database:update(table, id, updateValues)
+	function database:update(table, id, update_values)
+		local builder = self:query_builder()
+		builder:add('UPDATE')
+		builder:add_name(table, true)
+		builder:add('SET')
+		for k, v in pairs(update_values) do
+			builder:add_name(k, true)
+			builder:add('= ?', { v })
+			builder:add(',')
+		end
+		builder:remove_trailing(',')
+		builder:add('WHERE `id` = ?', { id })
+		return builder:query()
 	end
 
-	function database:update_where(table, updateValues, whereValues)
+	function database:update_where(table, update_values, where_values, limit)
+		local builder = self:query_builder()
+		builder:add('UPDATE')
+		builder:add_name(table, true)
+		builder:add('SET')
+		for k, v in pairs(update_values) do
+			builder:add_name(k, true)
+			builder:add('= ?', { v })
+			builder:add(',')
+		end
+		builder:remove_trailing(',')
+		builder:add('WHERE')
+		for k, v in pairs(where_values) do
+			builder:add_name(k, true)
+			builder:add('= ?', { v })
+			builder:add('AND')
+		end
+		builder:remove_trailing('AND')
+		if limit then
+			builder:add('LIMIT ?', { limit })
+		end
+		return builder:query()
 	end
 	
 	function database:delete(table, id)
 		return self:query('DELETE FROM ' .. database.safe_name(table) .. ' WHERE `id` = ?', { id })
 	end
 	
-	function database:delete_where(table, whereValues)
+	function database:delete_where(table, where_values, limit)
 		local builder = self:query_builder()
 		builder:add('DELETE FROM')
 		builder:add_name(table, true)
 		builder:add('WHERE')
-		for k, v in pairs(whereValues) do
+		for k, v in pairs(where_values) do
 			builder:add_name(k, true)
-			builder:add('= ?', v)
+			builder:add('= ?', { v })
+			builder:add('AND')
 		end
-		self:query(builder:query(), builder.bindings)
+		builder:remove_trailing('AND')
+		if limit then
+			builder:add('LIMIT ?', { limit })
+		end
+		return builder:query()
 	end
 		
 	-- create tables and columns --------------------- -----------------------------------------
@@ -146,7 +189,7 @@ return class(function (database)
 			builder:add('CREATE TABLE')
 			builder:add_name(table, true)
 			builder:add('(`id` INTEGER PRIMARY KEY)')
-			self:query(builder:query(), builder.bindings)
+			return builder:query()
 		end
 	end
 	
@@ -164,7 +207,7 @@ return class(function (database)
 			builder:add('DEFAULT ?', { default_value })
 			builder:add('NOT NULL')
 		end
-		self:query(builder:query(), builder.bindings)
+		return builder:query()
 	end
 	
 	function database:ensure_index(table, indexed_columns)
@@ -178,7 +221,7 @@ return class(function (database)
 		builder:add('ON')
 		builder:add_name(table, true)
 		builder:add_names(indexed_columns, true)
-		self:query(builder:query(), builder.bindings)
+		return builder:query()
 	end
 
 	-- query building ------------------------------------------- ------------------------------
@@ -193,9 +236,10 @@ return class(function (database)
 	
 	database.query_builder = class(function (query_builder)
 		
-		function query_builder:init()
+		function query_builder:init(database)
+			self.database = database
 			self.clauses = prelude.list()
-			self.bindings = prelude.list()
+			self.bindings = prelude.list(database)
 		end
 		
 		function query_builder:add(clause, bindings)
@@ -213,50 +257,56 @@ return class(function (database)
 			end
 		end
 		
+		function query_builder:remove_trailing(joiner)
+			if self.clauses[#self.clauses] == joiner then
+				self.clauses:remove(#self.clauses)
+			end
+		end
+		
 		function query_builder:add_name(name, wrap)
 			self.clauses:push(database.safe_name(name, wrap))
 		end
 		
 		function query_builder:add_names(names, wrap)
-			if wrap then
-				self.clauses:push('(')
-			end
+			local names_to_add = prelude.list()
 			if #names > 0 then
 				for _, name in ipairs(names) do
-					self.clauses:push(database.safe_name(name, wrap))
+					names_to_add:push(database.safe_name(name, wrap))
 				end
 			else
 				for k, v in pairs(names) do
-					self.clauses:push(database.safe_name(k, wrap))
+					names_to_add:push(database.safe_name(k, wrap))
 				end
 			end
 			if wrap then
-				self.clauses:push(')')
+				self.clauses:push('(' .. names_to_add:concat(', ') .. ')')
+			else
+				self.clauses:push(names_to_add:concat(', '))
 			end
 		end
 		
 		function query_builder:add_placeholders(bindings, wrap)
-			if wrap then
-				self.clauses:push('(')
-			end
+			local place_holders_to_add = prelude.list()
 			if #bindings > 0 then
 				for _, value in ipairs(bindings) do
-					self.clauses:push('?')
+					place_holders_to_add:push('?')
 					self.bindings:push(value)
 				end
 			else
 				for k, v in pairs(bindings) do
-					self.clauses:push('?')
+					place_holders_to_add:push('?')
 					self.bindings:push(v)
 				end
 			end
 			if wrap then
-				self.clauses:push(')')
+				self.clauses:push('(' .. place_holders_to_add:concat(', ') .. ')')
+			else
+				self.clauses:push(place_holders_to_add:concat(', '))
 			end
 		end
 		
 		function query_builder:query()
-			return self.clauses:concat(' ')
+			return self.database:query(self.clauses:concat(' '), self.bindings)
 		end
 		
 	end)

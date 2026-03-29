@@ -49,13 +49,14 @@ return class(function (session)
 	end
 	
 	function session:handle_api(api_name, session, input)
-		local success, result = pcall(self['api_' .. api_], self, session, input)
+		local success, result = pcall(self['api_' .. api_name], self, session, input)
 		if success then
 			return {
 				success = true,
 				data = result,
 			}
 		else
+			log(api_name, result)
 			return {
 				success = false,
 				error = result,
@@ -63,7 +64,12 @@ return class(function (session)
 		end
 	end
 	
-	-- /session/api/set_identity { session_id: '', identity: '' }
+	function session:api_check_session(session, input)
+		return {
+			identity = session.identity,
+		}
+	end
+	
 	function session:api_set_identity(session, input)
 		local session_id = session.session_id
 		-- validate
@@ -88,6 +94,16 @@ return class(function (session)
 				timestamp = now,
 			}
 		end
+		
+		return {
+			identity = identity
+		}
+	end
+	
+	function session:api_sign_out(session, input)
+		local session_id = session.session_id
+		self.database:delete_where('sessions', { session_id = session_id })
+		self.sessions[session_id] = nil
 	end
 
 end)

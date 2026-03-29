@@ -7,11 +7,14 @@ export default class EmojiAppModel {
 	constructor (name) {
 		this.connected = false;
 		this.emojiLog = null;
-		// read the log on launch
 		
+		// read the log on launch
 		this.readEmojiLog();
 		
-		// refresh data on a timer, or if not yet connected
+		// refresh data on a timer, or if not yet connected?
+		
+		// make the tiny servers login button available
+		api.enableSignIn();
 	}
 	
 	async readEmojiLog() {
@@ -19,7 +22,6 @@ export default class EmojiAppModel {
 		if (result.success) {
 			this.connected = true;
 			this.emojiLog = result.data;
-			// signal the model is updated
 			hair.signal(this);
 		}
 	}
