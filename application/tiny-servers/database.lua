@@ -20,6 +20,7 @@ return class(function (database)
 	
 	function database:init(filepath)
 		self.filepath = filepath
+		self.filename = filepath:match('/([^/]-)$') or filepath
 		self.sqlite = sql.open(filepath)
 		self.prepared = {}
 	end
@@ -27,7 +28,7 @@ return class(function (database)
 	-- general purpose SQL query function with bindings ------------------------------------------
 	
 	function database:query(query, bindings)
-		log('sql ' .. self.filepath, query)
+		log('sql ' .. self.filename, query)
 		-- find memoised prepared statement
 		if not self.prepared[query] then
 			self.prepared[query] = assert(self.sqlite:prepare(query), 'prepare: ' .. query)
@@ -110,7 +111,9 @@ return class(function (database)
 		builder:add_names(insert_values, true)
 		builder:add('VALUES')
 		builder:add_placeholders(insert_values, true)
-		return builder:query()
+		builder:query()
+		-- return the new insert ID
+		return self.sqlite:last_insert_rowid()
 	end
 
 	function database:update(table, id, update_values)

@@ -10,7 +10,7 @@ return class(function (wrangler)
 
 	-- api definitions ----------------------------------------------------
 	local synchronous_request_api = {
-		handle_api = 'server_name:string, api_name:string, input:* -> response:*',
+		handle_api = 'server_name:string, api_name:string, session:*, input:* -> response:*',
 	}
 
 	function wrangler:init()

@@ -6,6 +6,10 @@ local rascal = require('rascal.core')
 local random_key = require('rascal.util.random_key')
 local static_handler = require('rascal.http.static_handler')
 
+-- better default json encoding for this use case
+local cjson = require('cjson')
+cjson.encode_empty_table_as_object(false)
+
 return class(function (http_handler)
 
 	function http_handler:init()

@@ -18,7 +18,7 @@ return class(function (tiny_server)
 		self.last_scan = utc_time()
 		
 		-- prepare the sandbox environment for this code
-		self.sandbox = tiny_sandbox()
+		self.sandbox = tiny_sandbox(self.server_name, self.path)
 		
 		-- scan and load all the lua files
 		self:scan_lua_files('', function (filepath, attributes)
@@ -31,6 +31,11 @@ return class(function (tiny_server)
 			}
 			self.sandbox:execute_file(self.path .. filepath, server_name .. '/' .. filepath)
 		end)
+		
+		-- user provided prepare method if supplied
+		if self.sandbox:function_exists('prepare') then
+			self.sandbox:execute_function('prepare')
+		end
 	end
 	
 	function tiny_server:handle_api(api_name, session, input)

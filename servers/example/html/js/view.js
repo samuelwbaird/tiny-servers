@@ -25,7 +25,7 @@ function emojiLogView(model) {
 			return [
 				h.div(entry.emoji),
 				h.div(entry.identity),
-				h.div(formatTimestamp(entry.time)),
+				h.div(formatTimestamp(entry.timestamp)),
 				h.button('❌', {}, h.listen('click', async () => {
 					if (window.confirm('Are you sure you wish to delete this emoji?')) {
 						const result = await model.deleteEmoji(entry);

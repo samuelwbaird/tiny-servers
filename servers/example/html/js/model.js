@@ -26,24 +26,24 @@ export default class EmojiAppModel {
 		}
 	}
 	
-	async deleteEmoji(entry) {
-		const index = this.emojiLog.indexOf(entry);
-		if (index > -1) {
-			this.emojiLog.splice(index, 1);
+	async addEmoji(emoji) {
+		const result = await api.call('example', 'add_emoji', { emoji: emoji });
+		if (result.success) {
+			this.emojiLog.unshift(result.data);
 			hair.signal(this);
 		}
-		return new api.ApiResult(false, null, 'You must be an admin');
+		return result;
 	}
 	
-	async addEmoji(emoji) {
-		this.emojiLog.unshift({
-			id: 1,
-			emoji: emoji,
-			identity: 'who knows',
-			time: (Date.now() / 1000)
-		});
-		hair.signal(this);
-		return new api.ApiResult(true, null, null);
+	async deleteEmoji(entry) {
+		const result = await api.call('example', 'delete_emoji', { id: entry.id });
+		if (result.success) {
+			const index = this.emojiLog.indexOf(entry);
+			if (index > -1) {
+				this.emojiLog.splice(index, 1);
+				hair.signal(this);
+			}
+		}
+		return result;
 	}
-	
 }

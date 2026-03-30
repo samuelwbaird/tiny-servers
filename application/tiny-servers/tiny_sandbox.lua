@@ -1,10 +1,11 @@
 local class = require('core.class')
+local database = require('tiny-servers.database')
 
 return class(function (tiny_sandbox)
 
 	local prelude = nil
 
-	function tiny_sandbox:init()
+	function tiny_sandbox:init(server_name, path)
 		self.environment = {
 			-- lua modules
 			string = string,
@@ -21,6 +22,14 @@ return class(function (tiny_sandbox)
 			tonumber = tonumber,
 			getmetatable = getmetatable,
 			setmetatable = setmetatable,
+			
+			-- tiny server specific inserts
+			log = log,
+			utc_time = utc_time,
+			database = function (name)
+				-- safely open a database for this tiny server
+				return database.for_filepath(path .. 'db/' .. name:gsub('[^%w-_]', '') .. '.sqlite')
+			end,
 		}
 		self.environment['_ENV'] = self.environment
 		self.environment['_G'] = self.environment
