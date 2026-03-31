@@ -11,7 +11,10 @@ export default class EmojiAppModel {
 		// read the log on launch
 		this.readEmojiLog();
 		
-		// refresh data on a timer, or if not yet connected?
+		// refresh data on a timer
+		hair.timer(30, () => {
+			this.readEmojiLog();
+		})
 		
 		// make the tiny servers login button available
 		api.enableSignIn();

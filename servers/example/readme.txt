@@ -10,7 +10,7 @@ This example shows:
 
 Home page
 View the log (or most recent <X> item), from most recent to oldest, each entry is the date/time, email and emoji
-Sign in button
+Tiny servers provided sign in button
 Add an emoji function (you must be signed in)
 Clear the list (you must be signed in as a recognised administrator)
 

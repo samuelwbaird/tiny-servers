@@ -17,6 +17,7 @@ let signInModel = {
 		} else {
 			signInModel.status = IDENTITY_NOT_SIGNED_IN;
 			signInModel.identity = null;
+			alert(result.error);
 		}
 		h.signal(signInModel);
 	},

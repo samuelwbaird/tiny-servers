@@ -20,7 +20,8 @@ function is_signed_in(session)
 	return session.identity ~= nil and session.identity ~= ''
 end
 
+-- shared function that checks if an identity is one or our administrators
 function is_admin(session)
-	local valid_admin_emails = list({ 'admin@admin.com' })
+	local valid_admin_emails = list({ 'admin@admin.com', 'administrator@tinyservers.com' })
 	return valid_admin_emails:contains(session.identity)
 end

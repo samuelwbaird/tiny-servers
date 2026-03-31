@@ -59,7 +59,7 @@ return class(function (session)
 			log(api_name, result)
 			return {
 				success = false,
-				error = result,
+				error = result:match('%d: (.*)$') or result,
 			}
 		end
 	end
@@ -72,26 +72,29 @@ return class(function (session)
 	
 	function session:api_set_identity(session, input)
 		local session_id = session.session_id
-		-- validate
-		
 		local identity = input.identity
-		-- normalise
-		-- validate
 		
-		local now = utc_time()
+		-- harsh normalisation for the email address
+		identity = identity:lower():gsub('%s', '')
+		-- check if it seems somewhat valid
+		if not identity:match('[%w%.+%-]+@[%w%-]+%p%w+') then
+			error('This it not a valid email address')
+		end
+		
+		local timestamp = utc_time()
 		
 		-- either insert or update the DB as required
 		if self.sessions[session_id] then
-			self.database:update('sessions', self.sessions[session_id].id, { identity = identity, timestamp = now })
+			self.database:update('sessions', self.sessions[session_id].id, { identity = identity, timestamp = timestamp })
 			self.sessions[session_id].identity = identity
-			self.sessions[session_id].timestamp = now
+			self.sessions[session_id].timestamp = timestamp
 		else
-			local id = self.database:insert('sessions', { session_id = session.session_id, identity = identity, timestamp = now })
+			local id = self.database:insert('sessions', { session_id = session.session_id, identity = identity, timestamp = timestamp })
 			self.sessions[session_id] = {
 				id = id,
 				session_id = session_id,
 				identity = identity,
-				timestamp = now,
+				timestamp = timestamp,
 			}
 		end
 		

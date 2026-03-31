@@ -37,7 +37,8 @@ return class(function (http_handler)
 				session_id = session_id,
 				identity = nil,
 			}
-			if session_id then
+			-- look up the session data, if the ID is a valid session id
+			if session_id and #session_id == 64 and not session_id:match('[^%w]') then
 				session = self.session_request:get_session_data(session_id)
 			else
 				session_id = random_key.printable(64)
