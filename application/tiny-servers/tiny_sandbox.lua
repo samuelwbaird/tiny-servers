@@ -1,84 +1,76 @@
-local class = require('core.class')
-local database = require('tiny-servers.database')
+-- the environment each tiny server's lua files run in, with a limited set of
+-- globals, prelude made global and strict, and access to its own databases
 
-return class(function (tiny_sandbox)
+local lfs = require('lfs')
+local database = require('rascal.database')
+local utc_time = require('rascal.messaging').utc_time
 
-	local prelude = nil
+-- prelude is embedded in rascal, and loaded fresh into each sandbox
+local prelude_source = require('rascal.build').source('prelude')
 
-	function tiny_sandbox:init(server_name, path)
-		self.environment = {
-			-- lua modules
-			string = string,
-			table = table,
-			math = math,
-			
-			-- lua global functions
-			pairs = pairs,
-			ipairs = ipairs,
-			type = type,
-			print = print,
-			error = error,
-			tostring = tostring,
-			tonumber = tonumber,
-			getmetatable = getmetatable,
-			setmetatable = setmetatable,
-			
-			-- tiny server specific inserts
-			log = log,
-			utc_time = utc_time,
-			database = function (name)
-				-- safely open a database for this tiny server
-				return database.for_filepath(path .. 'db/' .. name:gsub('[^%w-_]', '') .. '.sqlite')
-			end,
-		}
-		self.environment['_ENV'] = self.environment
-		self.environment['_G'] = self.environment
-		
-		-- add the support libs to the sandbox
-		if not prelude then
-			local file = io.open('submodules/prelude/prelude.lua', 'rb')
-			prelude = file:read('*a')
-			file:close()
-		end
-		
-		-- execute as module
-		self.environment.prelude = self:execute_code(prelude, 'prelude')
-		
-		-- finalise 
-		self:execute_code('prelude.global().strict()', 'prelude_final')
-	end
-	
-	function tiny_sandbox:execute_code(code, name)
-		if setfenv then
-			local chunk, compile_error = loadstring(code, name)
-			if not chunk then
-				error(compile_error)
-			end
-			setfenv(chunk, self.environment)
-			return chunk()
-		else
-			local chunk, compile_error = load(code, name, 't', self.environment)
-			if not chunk then
-				error(compile_error)
-			end
-			return chunk()
-		end
-		
-	end
-	
-	function tiny_sandbox:execute_file(filepath, name)
-		local file = assert(io.open(filepath, 'rb'), 'could not read script ' .. filepath)
-		local code = file:read('*a')
-		file:close()
-		return self:execute_code(code, name or filepath)
-	end
-	
-	function tiny_sandbox:function_exists(function_name)
-		return type(rawget(self.environment, function_name)) == 'function'
-	end
-	
-	function tiny_sandbox:execute_function(function_name, ...)
-		return self.environment[function_name](...)
-	end
+-- log every query, as this is for local development
+database.log_queries = true
 
-end)
+local tiny_sandbox = class()
+
+function tiny_sandbox:init(server_name, path)
+	self.environment = {
+		-- lua modules
+		string = string,
+		table = table,
+		math = math,
+
+		-- lua global functions
+		pairs = pairs,
+		ipairs = ipairs,
+		type = type,
+		print = print,
+		error = error,
+		tostring = tostring,
+		tonumber = tonumber,
+		getmetatable = getmetatable,
+		setmetatable = setmetatable,
+
+		-- tiny server specific inserts
+		log = log,
+		utc_time = utc_time,
+		database = function (name)
+			-- safely open a database for this tiny server
+			lfs.mkdir(path .. 'db')
+			return database.for_filepath(path .. 'db/' .. name:gsub('[^%w-_]', '') .. '.sqlite')
+		end,
+	}
+	self.environment['_ENV'] = self.environment
+	self.environment['_G'] = self.environment
+
+	-- add the support libs to the sandbox, executed as a module
+	self.environment.prelude = self:execute_code(prelude_source, 'prelude')
+
+	-- finalise
+	self:execute_code('prelude.global().strict()', 'prelude_final')
+end
+
+function tiny_sandbox:execute_code(code, name)
+	local chunk, compile_error = load(code, name, 't', self.environment)
+	if not chunk then
+		error(compile_error)
+	end
+	return chunk()
+end
+
+function tiny_sandbox:execute_file(filepath, name)
+	local file = assert(io.open(filepath, 'rb'), 'could not read script ' .. filepath)
+	local code = file:read('a')
+	file:close()
+	return self:execute_code(code, name or filepath)
+end
+
+function tiny_sandbox:function_exists(function_name)
+	return type(rawget(self.environment, function_name)) == 'function'
+end
+
+function tiny_sandbox:execute_function(function_name, ...)
+	return self.environment[function_name](...)
+end
+
+return tiny_sandbox

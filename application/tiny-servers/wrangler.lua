@@ -1,81 +1,72 @@
+-- the wrangler service: loads each tiny server when it's first used (or has
+-- changed), and runs its api calls. It runs in a thread of its own, which
+-- also owns every tiny server's databases
+
 local lfs = require('lfs')
 
-local class = require('core.class')
-local array = require('core.array')
-local cache = require('core.cache')
+local tiny_server = require('tiny-servers.tiny_server')
 
-local tiny_server = require('tiny-servers/tiny_server')
+local wrangler = class()
 
-return class(function (wrangler)
+wrangler.api = {
+	handle_api = 'server_name:string, api_name:string, session:*, input:* -> response:*',
+}
 
-	-- api definitions ----------------------------------------------------
-	local synchronous_request_api = {
-		handle_api = 'server_name:string, api_name:string, session:*, input:* -> response:*',
-	}
+function wrangler:init()
+	self.servers = {}
+end
 
-	function wrangler:init()
-		self.servers = cache()
-		proxy_server(self, synchronous_request_api, 'inproc://tiny_server.wrangler.synchronous.request', zmq.REP, 'tiny_server.wrangler.synchronous.request')
-	end
-	
-	
-	local function handled(f, ...)
-		local args = { ... }
-		local wrapper = function ()
-			return f(unpack(args))
-		end
-		return xpcall(wrapper, function (error)
-			error = tostring(error)
-			-- log the error with code position
-			log(error)
-			-- print(require('debug').traceback(error))
-			-- return the error without code position
-			return error:match('%d: (.*)$') or error
-		end)
-	end
-	
-	function wrangler:handle_api(server_name, api_name, session, input)
-		-- safely get or load the server
-		local success, server = handled(self.get_server, self, server_name)
-		if not success then
-			return {
-				success = false,
-				error = server_name .. ' not available',
-			}
-		end
-		
-		local success, result = handled(server.handle_api, server, api_name, session, input)
-		if success then
-			return {
-				success = true,
-				data = result,
-			}
-		else
-			return {
-				success = false,
-				error = result,
-			}
-		end
-	end
-	
-	function wrangler:get_server(server_name)
-		-- if we already have this server return it
-		local server = self.servers:get(server_name)
-		if server and server:check_if_fresh() then
-			return server
-		end
-		
-		-- if not then check if the path exists, if it does create and return a new server
-		local path = '../servers/' .. server_name ..'/'
-		if lfs.attributes(path) then
-			server = tiny_server(server_name, path)
-			self.servers:set(server_name, server)
-			return server
-		end
-		
-		-- otherwise
-		log(server_name, '<server not found>')
-		return nil
+-- call a function, logging any error with its code position, and returning
+-- the error without it
+local function handled(f, ...)
+	return xpcall(f, function (error)
+		error = tostring(error)
+		log(error)
+		return error:match('%d: (.*)$') or error
+	end, ...)
+end
+
+function wrangler:handle_api(server_name, api_name, session, input)
+	-- safely get or load the server
+	local success, server = handled(self.get_server, self, server_name)
+	if not success or not server then
+		return {
+			success = false,
+			error = server_name .. ' not available',
+		}
 	end
 
-end)
+	local success, result = handled(server.handle_api, server, api_name, session, input)
+	if success then
+		return {
+			success = true,
+			data = result,
+		}
+	else
+		return {
+			success = false,
+			error = result,
+		}
+	end
+end
+
+function wrangler:get_server(server_name)
+	-- if we already have this server, and its files have not changed, return it
+	local server = self.servers[server_name]
+	if server and server:check_if_fresh() then
+		return server
+	end
+
+	-- if not then check if the path exists, if it does create and return a new server
+	local path = '../servers/' .. server_name .. '/'
+	if lfs.attributes(path) then
+		server = tiny_server(server_name, path)
+		self.servers[server_name] = server
+		return server
+	end
+
+	log(server_name, '<server not found>')
+	return nil
+end
+
+return wrangler
