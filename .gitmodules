@@ -1,9 +1,3 @@
-[submodule "application/submodules/brogue"]
-	path = application/submodules/brogue
-	url = https://github.com/samuelwbaird/brogue
-[submodule "application/submodules/prelude"]
-	path = application/submodules/prelude
-	url = https://github.com/samuelwbaird/prelude
 [submodule "application/submodules/hair-mini"]
 	path = application/submodules/hair-mini
 	url = https://github.com/samuelwbaird/hair-mini
